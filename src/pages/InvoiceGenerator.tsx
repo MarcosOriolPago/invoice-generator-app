@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
+import { UserSettingsDialog } from "@/components/UserSettingsDialog";
 
 const InvoiceGenerator = () => {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const handleInvoiceSubmit = (data: InvoiceData) => {
@@ -40,8 +43,10 @@ const InvoiceGenerator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
+    <div className="min-h-screen bg-gray-50">
+      <Header onOpenSettings={() => setShowSettings(true)} />
+      <div className="py-8">
+        <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-professional mb-2">
             Professional Invoice Generator
@@ -93,7 +98,13 @@ const InvoiceGenerator = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
+      
+      <UserSettingsDialog 
+        open={showSettings} 
+        onOpenChange={setShowSettings} 
+      />
     </div>
   );
 };
