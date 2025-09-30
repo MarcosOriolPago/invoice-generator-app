@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48" height="60" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Invoice Generator logo</title>
+  <desc id="desc">A modern simple logo: stylized invoice sheet with a check/pen mark and text "Invoice Generator".</desc>
+
+  <!-- Background (transparent) -->
+
+  <!-- Emblem: document with folded corner -->
+  <g>
+    <!-- paper shape -->
+    <rect x="0" y="0" width="48" height="60" rx="6" fill="#ffffff" stroke="#E6EEF9" stroke-width="2.5" />
+    <!-- folded corner -->
+    <path d="M36 0 L48 12 L36 12 Z" fill="#EBF5FF" />
+    <!-- horizontal lines (text) -->
+    <g fill="#D1E8FF" transform="translate(8,12)">
+      <rect x="0" y="0" width="30" height="3" rx="1.5" />
+      <rect x="0" y="8" width="30" height="3" rx="1.5" />
+      <rect x="0" y="16" width="18" height="3" rx="1.5" />
+    </g>
+
+    <!-- check/pen mark (accent) -->
+    <path d="M20 36 L28 44 L44 24" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- small accent dot -->
+    <circle cx="14" cy="44" r="2.5" fill="#06B6D4" />
+  </g>
+
+</svg>

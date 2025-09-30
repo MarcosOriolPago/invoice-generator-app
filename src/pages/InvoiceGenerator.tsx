@@ -47,14 +47,6 @@ const InvoiceGenerator = () => {
       <Header onOpenSettings={() => setShowSettings(true)} />
       <div className="py-8">
         <div className="container mx-auto px-4 max-w-7xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-professional mb-2">
-            Professional Invoice Generator
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Create beautiful, professional invoices for your web development services
-          </p>
-        </div>
 
         {!showPreview ? (
           <div className="max-w-4xl mx-auto">

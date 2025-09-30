@@ -98,10 +98,10 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
     try {
       const { error } = await supabase
         .from('user_invoice_configs')
-        .upsert({
-          user_id: user.id,
-          ...config,
-        });
+        .upsert(
+          { user_id: user.id, ...config },
+          { onConflict: 'user_id' } // 👈 ensures update instead of conflict
+        );
 
       if (error) {
         toast.error('Failed to save settings');
@@ -116,6 +116,7 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
       setSaving(false);
     }
   };
+
 
   const updateConfig = (field: keyof UserConfig, value: string) => {
     setConfig(prev => ({ ...prev, [field]: value }));

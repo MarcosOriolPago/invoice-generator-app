@@ -23,6 +23,7 @@ const AuthPage = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("signing in with", email, password);
     setLoading(true);
 
     try {
