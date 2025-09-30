@@ -1,15 +1,17 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { InvoiceForm, InvoiceData } from "@/components/InvoiceForm";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { generatePDF } from "@/utils/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText, Eye } from "lucide-react";
+import { Download, FileText, Eye, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { UserSettingsDialog } from "@/components/UserSettingsDialog";
 
 const InvoiceGenerator = () => {
+  const navigate = useNavigate();
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -43,10 +45,21 @@ const InvoiceGenerator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header onOpenSettings={() => setShowSettings(true)} />
       <div className="py-8">
         <div className="container mx-auto px-4 max-w-7xl">
+          {/* Back to Dashboard Button */}
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </div>
 
         {!showPreview ? (
           <div className="max-w-4xl mx-auto">
