@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      invoices: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -41,7 +65,6 @@ export type Database = {
         }
         Relationships: []
       }
-
       user_invoice_configs: {
         Row: {
           bank_details: string | null
@@ -93,40 +116,7 @@ export type Database = {
         }
         Relationships: []
       }
-
-      invoices: {
-        Row: {
-          id: string
-          user_id: string
-          data: any // stores InvoiceData as JSONB
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          data: any
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          data?: any
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "profiles" | "auth.users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
-
     Views: {
       [_ in never]: never
     }
