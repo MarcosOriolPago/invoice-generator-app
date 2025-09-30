@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import InvoiceGenerator from "./pages/InvoiceGenerator";
+import { InvoicesDashboard } from "./pages/InvoicesDashboard";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -20,11 +21,17 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/" element={
+            <Route path="/invoice-generator" element={
               <ProtectedRoute>
                 <InvoiceGenerator />
               </ProtectedRoute>
             } />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <InvoicesDashboard />
+              </ProtectedRoute>
+            } />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

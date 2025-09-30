@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 /* ---------------- SCHEMA ---------------- */
 
@@ -113,6 +115,7 @@ const SubtasksFieldArray = ({ nestIndex, control, register }) => {
 
 export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<InvoiceData>({
     resolver: zodResolver(invoiceSchema),
@@ -145,13 +148,29 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
     name: "services",
   });
 
+  const handleSaveInvoice = async (invoiceData: InvoiceData) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("invoices")
+      .insert({
+        user_id: user.id,
+        data: invoiceData,
+      });
+
+    if (error) {
+      console.error("Failed to save invoice:", error);
+    }
+  };
+
   const handleSubmit = async (data: InvoiceData) => {
     setIsGenerating(true);
     try {
       await onSubmit(data);
-      toast.success("Invoice generated successfully!");
+      await handleSaveInvoice(data); // 👈 persist to DB
+      toast.success("Invoice saved and generated!");
     } catch (error) {
-      toast.error("Failed to generate invoice");
+      toast.error("Failed to save invoice");
     } finally {
       setIsGenerating(false);
     }
