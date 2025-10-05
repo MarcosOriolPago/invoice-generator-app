@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Download, FileWarning } from 'lucide-react';
+import { ArrowLeft, Loader2, Download, Edit, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { InvoicePreview } from './InvoicePreview';
+import { generatePDF } from '@/utils/pdfGenerator';
 
-// Define the expected invoice structure including the new pdf_path
 interface InvoiceRecord {
   id: string;
   created_at: string;
   user_id: string;
-  data: any; // The JSON data of the invoice
-  pdf_path: string | null; // The public URL to the generated PDF
+  data: any;
+  pdf_path?: string | null;
+  space_id?: string | null;
 }
 
 export const InvoiceDetailPage = () => {
@@ -21,16 +23,35 @@ export const InvoiceDetailPage = () => {
   const { user } = useAuth();
   const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userConfig, setUserConfig] = useState<any>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user && id) {
       fetchInvoice();
+      fetchUserConfig();
     } else if (!id) {
         setLoading(false);
         toast.error("Invalid invoice ID.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, id]);
+
+  const fetchUserConfig = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_invoice_configs')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) setUserConfig(data);
+    } catch (err) {
+      console.error('Error fetching user config:', err);
+    }
+  };
 
   const fetchInvoice = async () => {
     setLoading(true);
@@ -48,17 +69,16 @@ export const InvoiceDetailPage = () => {
     try {
       const { data, error } = await supabase
         .from('invoices')
-        // Select all columns and the new pdf_path
-        .select('id, created_at, user_id, data, pdf_path') 
+        .select('*')
         .eq('id', id)
-        .eq('user_id', userId) // RLS check for ownership
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (error || !data) {
         throw new Error("Invoice not found or access denied.");
       }
 
-      setInvoice(data as InvoiceRecord);
+      setInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice:", error);
       toast.error(error instanceof Error ? error.message : "Failed to load invoice details.");
@@ -75,6 +95,27 @@ export const InvoiceDetailPage = () => {
     );
   }
 
+  const handleDownloadPDF = async () => {
+    if (!invoice || !previewRef.current) {
+      toast.error("No invoice data available");
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      await generatePDF(previewRef.current, invoice.data);
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/invoice-generator?edit=${id}`);
+  };
+
   if (!invoice) {
     return (
       <div className="text-center py-20">
@@ -89,48 +130,27 @@ export const InvoiceDetailPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <Button variant="outline" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
-        <h1 className="text-xl sm:text-3xl font-bold truncate">Invoice #{invoice.data.invoiceNumber}</h1>
-        {invoice.pdf_path ? (
-          <a href={invoice.pdf_path} target="_blank" rel="noopener noreferrer" download>
-            <Button>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
-          </a>
-        ) : (
-          <Button disabled variant="secondary" className="cursor-not-allowed">
-            <FileWarning className="h-4 w-4 mr-2 text-yellow-600" />
-            PDF Missing
+        <h1 className="text-xl sm:text-3xl font-bold">Invoice #{invoice.data.invoiceNumber}</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleEdit}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
           </Button>
-        )}
+          <Button onClick={handleDownloadPDF} disabled={isGeneratingPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            {isGeneratingPDF ? "Generating..." : "Download PDF"}
+          </Button>
+        </div>
       </div>
 
-      <div className="p-0 bg-white shadow-xl rounded-lg border border-gray-200 overflow-hidden">
-        {invoice.pdf_path ? (
-          <div className="relative w-full aspect-[3/4] max-h-[80vh]">
-            {/* Display the PDF in an iframe. Using a safe aspect ratio. */}
-            <iframe
-              src={invoice.pdf_path}
-              title={`Invoice ${invoice.data.invoiceNumber} PDF Preview`}
-              className="w-full h-full"
-              frameBorder="0"
-              style={{ minHeight: '600px' }}
-            >
-              <p>Your browser does not support iframes. <a href={invoice.pdf_path}>Download the PDF instead.</a></p>
-            </iframe>
-          </div>
-        ) : (
-          <div className="text-center py-20 border-dashed border-gray-300">
-            <FileWarning className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">PDF file not found for this invoice. It may have been generated before this feature was enabled.</p>
-          </div>
-        )}
+      <div className="max-w-4xl mx-auto">
+        <InvoicePreview ref={previewRef} data={invoice.data} userConfig={userConfig} />
       </div>
     </div>
   );

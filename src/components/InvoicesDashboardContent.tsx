@@ -5,18 +5,23 @@ import { useAuth } from "@/hooks/useAuth"
 import { InvoiceCard } from "@/components/InvoiceCard"
 import { InvoiceToolbar } from "@/components/InvoiceToolbar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, FolderPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { toast } from "sonner" // Assuming sonner is available
+import { toast } from "sonner"
+import { CreateSpaceDialog } from "@/components/CreateSpaceDialog"
+import { SpaceCard } from "@/components/SpaceCard"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const InvoicesDashboardContent = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState<any[]>([])
+  const [spaces, setSpaces] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState("date")
+  const [showCreateSpace, setShowCreateSpace] = useState(false)
 
   // confirmation modal state
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -26,7 +31,10 @@ export const InvoicesDashboardContent = () => {
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (user) fetchInvoices()
+    if (user) {
+      fetchInvoices()
+      fetchSpaces()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
@@ -61,6 +69,70 @@ export const InvoicesDashboardContent = () => {
     }
 
     setInvoices(data || [])
+  }
+
+  const fetchSpaces = async () => {
+    const { data, error } = await supabase
+      .from("invoice_spaces")
+      .select("*")
+      .eq("user_id", user!.id)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching spaces:", error)
+      return
+    }
+
+    // Count invoices in each space
+    const spacesWithCounts = await Promise.all(
+      (data || []).map(async (space) => {
+        const { count } = await supabase
+          .from("invoices")
+          .select("*", { count: "exact", head: true })
+          .eq("space_id", space.id)
+          .eq("user_id", user!.id)
+
+        return { ...space, invoice_count: count || 0 }
+      })
+    )
+
+    setSpaces(spacesWithCounts)
+  }
+
+  const handleDeleteSpace = async (spaceId: string) => {
+    try {
+      const { error } = await supabase
+        .from("invoice_spaces")
+        .delete()
+        .eq("id", spaceId)
+        .eq("user_id", user!.id)
+
+      if (error) throw error
+      toast.success("Space deleted")
+      fetchSpaces()
+      fetchInvoices() // Refresh invoices as they might have been moved out
+    } catch (error) {
+      console.error("Error deleting space:", error)
+      toast.error("Failed to delete space")
+    }
+  }
+
+  const handleMoveToSpace = async (invoiceId: string, spaceId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ space_id: spaceId })
+        .eq("id", invoiceId)
+        .eq("user_id", user!.id)
+
+      if (error) throw error
+      toast.success(spaceId ? "Invoice moved to space" : "Invoice removed from space")
+      fetchInvoices()
+      fetchSpaces()
+    } catch (error) {
+      console.error("Error moving invoice:", error)
+      toast.error("Failed to move invoice")
+    }
   }
 
   // open confirmation modal (double-check): require exact invoice number typed
@@ -178,6 +250,8 @@ export const InvoicesDashboardContent = () => {
     getField(confirmDeleteInvoice?.data, "invoiceNumber", "invoice_number") ?? "DELETE"
   const confirmMatch = confirmInput.trim() === `${requiredConfirmText}`
 
+  const freeInvoices = filteredInvoices.filter((inv) => !inv.space_id)
+
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
@@ -185,49 +259,127 @@ export const InvoicesDashboardContent = () => {
           <h1 className="text-3xl font-bold mb-2">Invoice Dashboard</h1>
           <p className="text-muted-foreground">Manage and track your invoices</p>
         </div>
-        <Button onClick={() => navigate("/invoice-generator")} className="flex gap-2">
-          <Plus className="w-4 h-4" /> New Invoice
-        </Button>
-      </div>
-
-      <InvoiceToolbar search={search} setSearch={setSearch} sort={sort} setSort={setSort} />
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <AnimatePresence>
-          {filteredInvoices.map((invoice) => (
-            <motion.div
-              key={invoice.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.18 }}
-            >
-              <InvoiceCard
-                invoice={invoice}
-                // Updated navigation to the new detail page
-                onView={() => navigate(`/invoice/${invoice.id}`)} 
-                onDelete={() => requestDelete(invoice)}
-                calculateTotal={calculateInvoiceTotal}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {filteredInvoices.length === 0 && (
-        <motion.div
-          className="text-center py-20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <p className="text-muted-foreground mb-4">No invoices found</p>
-          <Button onClick={() => navigate("/invoice-generator")}>
-            <Plus className="w-4 h-4 mr-2" /> Create Your First Invoice
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowCreateSpace(true)} className="flex gap-2">
+            <FolderPlus className="w-4 h-4" /> New Space
           </Button>
-        </motion.div>
-      )}
+          <Button onClick={() => navigate("/invoice-generator")} className="flex gap-2">
+            <Plus className="w-4 h-4" /> New Invoice
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="all" className="mb-8">
+        <TabsList>
+          <TabsTrigger value="all">All Invoices</TabsTrigger>
+          <TabsTrigger value="spaces">Spaces ({spaces.length})</TabsTrigger>
+          <TabsTrigger value="unorganized">Unorganized ({freeInvoices.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6">
+          <InvoiceToolbar search={search} setSearch={setSearch} sort={sort} setSort={setSort} />
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
+            <AnimatePresence>
+              {filteredInvoices.map((invoice) => (
+                <motion.div
+                  key={invoice.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <InvoiceCard
+                    invoice={invoice}
+                    onView={() => navigate(`/invoice/${invoice.id}`)}
+                    onDelete={() => requestDelete(invoice)}
+                    calculateTotal={calculateInvoiceTotal}
+                    onMoveToSpace={(spaceId) => handleMoveToSpace(invoice.id, spaceId)}
+                    spaces={spaces}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {filteredInvoices.length === 0 && (
+            <motion.div
+              className="text-center py-20"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <p className="text-muted-foreground mb-4">No invoices found</p>
+              <Button onClick={() => navigate("/invoice-generator")}>
+                <Plus className="w-4 h-4 mr-2" /> Create Your First Invoice
+              </Button>
+            </motion.div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="spaces" className="mt-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {spaces.map((space) => (
+              <SpaceCard
+                key={space.id}
+                space={space}
+                onClick={() => navigate(`/space/${space.id}`)}
+                onDelete={() => handleDeleteSpace(space.id)}
+              />
+            ))}
+          </div>
+
+          {spaces.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground mb-4">No spaces created yet</p>
+              <Button onClick={() => setShowCreateSpace(true)}>
+                <FolderPlus className="w-4 h-4 mr-2" /> Create Your First Space
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="unorganized" className="mt-6">
+          <InvoiceToolbar search={search} setSearch={setSearch} sort={sort} setSort={setSort} />
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
+            <AnimatePresence>
+              {freeInvoices.map((invoice) => (
+                <motion.div
+                  key={invoice.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <InvoiceCard
+                    invoice={invoice}
+                    onView={() => navigate(`/invoice/${invoice.id}`)}
+                    onDelete={() => requestDelete(invoice)}
+                    calculateTotal={calculateInvoiceTotal}
+                    onMoveToSpace={(spaceId) => handleMoveToSpace(invoice.id, spaceId)}
+                    spaces={spaces}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {freeInvoices.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground">All invoices are organized in spaces</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Confirm delete dialog (double-check) */}
+      <CreateSpaceDialog
+        open={showCreateSpace}
+        onOpenChange={setShowCreateSpace}
+        onSpaceCreated={() => {
+          fetchSpaces()
+        }}
+      />
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {

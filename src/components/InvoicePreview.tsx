@@ -7,6 +7,10 @@ interface UserConfig {
   company_email?: string;
   company_phone?: string;
   company_website?: string;
+  tax_number?: string;
+  bank_details?: string;
+  default_payment_terms?: string;
+  default_currency?: string;
 }
 
 interface InvoicePreviewProps {
@@ -38,46 +42,57 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
         className="bg-white p-10 shadow-xl max-w-4xl mx-auto rounded-lg border border-gray-200"
       >
         {/* Header */}
-        <div className="flex justify-between items-start mb-10">
-          <div>
-            {/* +++ Display User's Company Info +++ */}
-            {userConfig?.company_name && <h1 className="text-3xl font-bold text-gray-800">{userConfig.company_name}</h1>}
-            {userConfig?.company_address && <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">{userConfig.company_address}</p>}
-            <div className="text-sm text-gray-500 mt-2">
-                {userConfig?.company_email && <p>{userConfig.company_email}</p>}
-                {userConfig?.company_phone && <p>{userConfig.company_phone}</p>}
+        <div className="flex justify-between items-start mb-10 pb-6 border-b border-gray-200">
+          <div className="flex-1">
+            {userConfig?.company_name && (
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">{userConfig.company_name}</h1>
+            )}
+            {userConfig?.company_address && (
+              <p className="text-sm text-gray-600 mb-2 whitespace-pre-line">{userConfig.company_address}</p>
+            )}
+            <div className="text-sm text-gray-600 space-y-1">
+              {userConfig?.company_email && <p>Email: {userConfig.company_email}</p>}
+              {userConfig?.company_phone && <p>Phone: {userConfig.company_phone}</p>}
+              {userConfig?.company_website && <p>Web: {userConfig.company_website}</p>}
+              {userConfig?.tax_number && <p>Tax ID: {userConfig.tax_number}</p>}
             </div>
           </div>
           <div className="text-right">
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">INVOICE</h1>
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <p className="text-sm text-gray-600">Invoice Number</p>
+            <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight mb-4">INVOICE</h1>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-xs text-gray-600 uppercase mb-1">Invoice Number</p>
               <p className="text-2xl font-bold text-blue-600">{data.invoiceNumber}</p>
             </div>
           </div>
         </div>
 
         { /* Billing Info */}
-        <div className="grid grid-cols-2 gap-4 mb-10">
+        <div className="grid grid-cols-2 gap-8 mb-10">
             <div>
-                <h2 className="text-sm font-semibold text-gray-600 mb-2">BILL TO</h2>
-                {data.clientName && <p className="font-bold text-gray-800">{data.clientName}</p>}
-                {data.clientAddress && <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{data.clientAddress}</p>}
-                {data.clientEmail && <p className="text-sm text-gray-500 mt-1">{data.clientEmail}</p>}
+                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Bill To</h2>
+                {data.clientName && <p className="font-bold text-gray-900 text-lg mb-2">{data.clientName}</p>}
+                {data.clientAddress && <p className="text-sm text-gray-600 mt-1 whitespace-pre-line leading-relaxed">{data.clientAddress}</p>}
+                {data.clientEmail && <p className="text-sm text-gray-600 mt-2">Email: {data.clientEmail}</p>}
             </div>
-            <div className="text-right">
-                <p className="text-gray-500 text-sm">
-                    Invoice Date:{" "}
-                    <span className="font-semibold text-gray-700">
+            <div className="text-right space-y-2">
+                <div>
+                    <p className="text-xs text-gray-500 uppercase">Invoice Date</p>
+                    <p className="font-semibold text-gray-900">
                         {new Date(data.invoiceDate).toLocaleDateString()}
-                    </span>
-                </p>
-                <p className="text-gray-500 text-sm">
-                    Due Date:{" "}
-                    <span className="font-semibold text-gray-700">
+                    </p>
+                </div>
+                <div>
+                    <p className="text-xs text-gray-500 uppercase">Due Date</p>
+                    <p className="font-semibold text-gray-900">
                         {new Date(data.dueDate).toLocaleDateString()}
-                    </span>
-                </p>
+                    </p>
+                </div>
+                {userConfig?.default_payment_terms && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Payment Terms</p>
+                    <p className="font-semibold text-gray-900">{userConfig.default_payment_terms}</p>
+                  </div>
+                )}
             </div>
         </div>
 
@@ -178,13 +193,29 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
           </div>
         </div>
 
-        {/* Notes */}
-        {data.notes && (
-          <div className="border-t border-gray-200 pt-6">
-            <h4 className="font-semibold text-gray-900 mb-2">Notes</h4>
-            <p className="text-gray-700 whitespace-pre-wrap">{data.notes}</p>
+        {/* Notes & Payment Info */}
+        <div className="border-t-2 border-gray-200 pt-6 space-y-6">
+          {data.notes && (
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Notes</h4>
+              <p className="text-gray-700 whitespace-pre-wrap text-sm">{data.notes}</p>
+            </div>
+          )}
+          
+          {userConfig?.bank_details && (
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Payment Information</h4>
+              <p className="text-gray-700 whitespace-pre-wrap text-sm">{userConfig.bank_details}</p>
+            </div>
+          )}
+          
+          <div className="text-center text-xs text-gray-500 pt-4">
+            <p>Thank you for your business!</p>
+            {userConfig?.company_website && (
+              <p className="mt-1">{userConfig.company_website}</p>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }

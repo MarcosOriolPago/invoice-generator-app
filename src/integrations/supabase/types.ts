@@ -14,11 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
+      invoice_spaces: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           created_at: string
           data: Json
           id: string
+          pdf_path: string | null
+          space_id: string | null
           updated_at: string
           user_id: string
         }
@@ -26,6 +58,8 @@ export type Database = {
           created_at?: string
           data: Json
           id?: string
+          pdf_path?: string | null
+          space_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -33,10 +67,20 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          pdf_path?: string | null
+          space_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoices_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

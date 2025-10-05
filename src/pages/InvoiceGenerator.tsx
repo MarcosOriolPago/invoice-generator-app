@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { InvoiceForm, InvoiceData } from "@/components/InvoiceForm";
 import { InvoicePreview } from "@/components/InvoicePreview";
@@ -9,14 +9,36 @@ import { Download, FileText, Eye, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { UserSettingsDialog } from "@/components/UserSettingsDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const InvoiceGenerator = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [userConfig, setUserConfig] = useState<any>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchUserConfig = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('user_invoice_configs')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (error && error.code !== 'PGRST116') throw error;
+        if (data) setUserConfig(data);
+      } catch (err) {
+        console.error('Error fetching user config:', err);
+      }
+    };
+    fetchUserConfig();
+  }, [user]);
 
   const handleInvoiceSubmit = (data: InvoiceData) => {
     setInvoiceData(data);
@@ -99,7 +121,7 @@ const InvoiceGenerator = () => {
 
             {/* Invoice Preview */}
             <div className="max-w-4xl mx-auto">
-              <InvoicePreview ref={previewRef} data={invoiceData!} />
+              <InvoicePreview ref={previewRef} data={invoiceData!} userConfig={userConfig} />
             </div>
           </div>
         )}

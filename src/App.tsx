@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import InvoiceGenerator from "./pages/InvoiceGenerator";
 import { InvoicesDashboard } from "./pages/InvoicesDashboard";
 import { InsightsPage } from "./pages/Insights";
+import { InvoiceDetailPage } from "./components/InvoiceDetailPage";
+import { SpaceView } from "./pages/SpaceView";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +32,16 @@ const App = () => (
             <Route path="/insights" element={
               <ProtectedRoute>
                 <InsightsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/invoice/:id" element={
+              <ProtectedRoute>
+                <InvoiceDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/space/:spaceId" element={
+              <ProtectedRoute>
+                <SpaceView />
               </ProtectedRoute>
             } />
             <Route path="/" element={
