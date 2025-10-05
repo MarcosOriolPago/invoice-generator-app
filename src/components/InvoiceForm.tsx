@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { InvoicePreview } from "./InvoicePreview";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 /* ---------------- SCHEMA ---------------- */
 
@@ -31,9 +34,21 @@ const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   invoiceDate: z.string().min(1, "Invoice date is required"),
   dueDate: z.string().min(1, "Due date is required"),
+  clientName: z.string().min(1, "Client name is required"),
+  clientEmail: z.string().email("Invalid email address").optional(),
+  clientAddress: z.string().optional(),
   services: z.array(serviceItemSchema).min(1, "At least one service is required"),
   notes: z.string().optional(),
 });
+
+interface UserConfig {
+  company_name?: string;
+  company_address?: string;
+  company_email?: string;
+  company_phone?: string;
+  company_website?: string;
+  bank_details?: string;
+}
 
 export type InvoiceData = z.infer<typeof invoiceSchema>;
 
@@ -111,11 +126,107 @@ const SubtasksFieldArray = ({ nestIndex, control, register }) => {
   );
 };
 
+/* ---------------- PDF GENERATION & UPLOAD UTILITY ---------------- */
+
+const createPdfAndUpload = async (invoiceData: InvoiceData, htmlElement: HTMLDivElement, userId: string): Promise<string | null> => {
+  if (!htmlElement) {
+    toast.error("PDF generation failed: Preview element not found.");
+    return null;
+  }
+  
+  try {
+    // 1. Generate canvas from HTML
+    const canvas = await html2canvas(htmlElement, {
+      scale: 2, // Use higher resolution for better quality
+      useCORS: true,
+      windowWidth: htmlElement.offsetWidth,
+      windowHeight: htmlElement.offsetHeight,
+      scrollY: -window.scrollY, // Correctly captures the hidden element
+    });
+
+    // 2. Convert canvas to PDF using jsPDF
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Calculate dimensions for A4
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    // Add first page image
+    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    // Handle subsequent pages if content is longer than one page
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    const pdfBlob = pdf.output('blob');
+    
+    // 3. Upload to Supabase Storage
+    const fileName = `invoices/${userId}/${invoiceData.invoiceNumber}-${Date.now()}.pdf`;
+    
+    // NOTE: A public bucket named 'invoices_pdfs' is required in Supabase Storage.
+    const { error: uploadError } = await supabase.storage
+      .from('invoices_pdfs') 
+      .upload(fileName, pdfBlob, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: 'application/pdf',
+      });
+      
+    if (uploadError) {
+      console.error("Supabase storage upload failed:", uploadError);
+      throw new Error("Failed to upload PDF");
+    }
+
+    // 4. Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('invoices_pdfs')
+      .getPublicUrl(fileName);
+      
+    return publicUrlData.publicUrl;
+
+  } catch (err) {
+    console.error("PDF generation or upload failed:", err);
+    return null;
+  }
+};
+
+
 /* ---------------- MAIN FORM ---------------- */
 
 export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { user } = useAuth();
+  const invoicePreviewRef = useRef<HTMLDivElement>(null); // Ref for the hidden preview component
+  const [userConfig, setUserConfig] = useState<UserConfig | null>(null);
+
+  useEffect(() => {
+    const fetchUserConfig = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('user_invoice_configs')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (error && error.code !== 'PGRST116') throw error;
+        if (data) setUserConfig(data);
+      } catch (error) {
+        console.error("Failed to fetch user invoice settings:", error);
+        toast.error("Could not load your invoice settings.");
+      }
+    };
+    fetchUserConfig();
+  }, [user]);
 
   const form = useForm<InvoiceData>({
     resolver: zodResolver(invoiceSchema),
@@ -148,29 +259,49 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
     name: "services",
   });
 
-  const handleSaveInvoice = async (invoiceData: InvoiceData) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("invoices")
-      .insert({
-        user_id: user.id,
-        data: invoiceData,
-      });
-
-    if (error) {
-      console.error("Failed to save invoice:", error);
+  const handleSubmit = async (invoiceData: InvoiceData) => {
+    if (!user) {
+      toast.error("User not authenticated.");
+      return;
     }
-  };
-
-  const handleSubmit = async (data: InvoiceData) => {
+    
     setIsGenerating(true);
+    let pdfPath: string | null = null;
+    
     try {
-      await onSubmit(data);
-      await handleSaveInvoice(data); // 👈 persist to DB
+      // 1. Generate PDF and upload to Supabase Storage
+      if (invoicePreviewRef.current) {
+        toast.info("Generating and uploading PDF...");
+        pdfPath = await createPdfAndUpload(invoiceData, invoicePreviewRef.current, user.id);
+        if (!pdfPath) {
+          throw new Error("PDF generation failed.");
+        }
+      } else {
+        throw new Error("Invoice preview element is missing for PDF generation.");
+      }
+
+      // 2. Persist invoice data and PDF path to DB
+      const { error } = await supabase
+        .from("invoices")
+        .insert({
+          user_id: user.id,
+          data: invoiceData,
+          pdf_path: pdfPath, // Save the public URL to the invoice record
+        });
+
+      if (error) {
+        console.error("Failed to save invoice:", error);
+        throw new Error("Failed to save invoice data to DB.");
+      }
+      
+      // 3. Call parent onSubmit and navigate away
+      onSubmit(invoiceData); 
       toast.success("Invoice saved and generated!");
+      
     } catch (error) {
-      toast.error("Failed to save invoice");
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      console.error("Submission error:", error);
+      toast.error(`Failed to complete invoice generation: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
     }
@@ -185,8 +316,18 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
     });
   };
 
+  const watchAllFields = form.watch(); // Rerender preview on form change
+  
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <div style={{ position: 'absolute', left: '-9999px', top: '0', zIndex: -1 }}>
+        <InvoicePreview 
+          data={watchAllFields as InvoiceData} 
+          userConfig={userConfig} 
+          ref={invoicePreviewRef} 
+        />
+      </div>
+      
       {/* Invoice Details */}
       <Card>
         <CardHeader>
@@ -204,6 +345,29 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
           <div className="space-y-2">
             <Label>Due Date</Label>
             <Input type="date" {...form.register("dueDate")} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* +++ Add Client Details Card +++ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Client Name</Label>
+              <Input {...form.register("clientName")} placeholder="Client's Full Name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Client Email (optional)</Label>
+              <Input type="email" {...form.register("clientEmail")} placeholder="client@example.com" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Client Address (optional)</Label>
+            <Textarea {...form.register("clientAddress")} placeholder="Client's Billing Address" rows={2} />
           </div>
         </CardContent>
       </Card>
@@ -300,7 +464,14 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
           className="bg-primary hover:bg-primary/90"
           disabled={isGenerating}
         >
-          {isGenerating ? "Generating..." : "Generate Invoice"}
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Generating PDF...
+            </>
+          ) : (
+            "Generate Invoice"
+          )}
         </Button>
       </div>
     </form>

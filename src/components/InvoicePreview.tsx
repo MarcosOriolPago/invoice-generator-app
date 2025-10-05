@@ -1,12 +1,21 @@
 import { forwardRef } from "react";
 import { InvoiceData } from "./InvoiceForm";
 
+interface UserConfig {
+  company_name?: string;
+  company_address?: string;
+  company_email?: string;
+  company_phone?: string;
+  company_website?: string;
+}
+
 interface InvoicePreviewProps {
   data: InvoiceData;
+  userConfig: UserConfig | null;
 }
 
 export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
-  ({ data }, ref) => {
+  ({ data, userConfig  }, ref) => {
     const calculateServiceTotal = (service) => {
       const subtaskHours = service.subtasks?.reduce(
         (sum, sub) => sum + sub.hours,
@@ -31,30 +40,45 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
         {/* Header */}
         <div className="flex justify-between items-start mb-10">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">
-              INVOICE
-            </h1>
-            <p className="text-gray-500 text-sm">
-              Invoice Date:{" "}
-              <span className="font-semibold text-gray-700">
-                {new Date(data.invoiceDate).toLocaleDateString()}
-              </span>
-            </p>
-            <p className="text-gray-500 text-sm">
-              Due Date:{" "}
-              <span className="font-semibold text-gray-700">
-                {new Date(data.dueDate).toLocaleDateString()}
-              </span>
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <p className="text-sm text-gray-600">Invoice Number</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {data.invoiceNumber}
-              </p>
+            {/* +++ Display User's Company Info +++ */}
+            {userConfig?.company_name && <h1 className="text-3xl font-bold text-gray-800">{userConfig.company_name}</h1>}
+            {userConfig?.company_address && <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">{userConfig.company_address}</p>}
+            <div className="text-sm text-gray-500 mt-2">
+                {userConfig?.company_email && <p>{userConfig.company_email}</p>}
+                {userConfig?.company_phone && <p>{userConfig.company_phone}</p>}
             </div>
           </div>
+          <div className="text-right">
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">INVOICE</h1>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <p className="text-sm text-gray-600">Invoice Number</p>
+              <p className="text-2xl font-bold text-blue-600">{data.invoiceNumber}</p>
+            </div>
+          </div>
+        </div>
+
+        { /* Billing Info */}
+        <div className="grid grid-cols-2 gap-4 mb-10">
+            <div>
+                <h2 className="text-sm font-semibold text-gray-600 mb-2">BILL TO</h2>
+                {data.clientName && <p className="font-bold text-gray-800">{data.clientName}</p>}
+                {data.clientAddress && <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{data.clientAddress}</p>}
+                {data.clientEmail && <p className="text-sm text-gray-500 mt-1">{data.clientEmail}</p>}
+            </div>
+            <div className="text-right">
+                <p className="text-gray-500 text-sm">
+                    Invoice Date:{" "}
+                    <span className="font-semibold text-gray-700">
+                        {new Date(data.invoiceDate).toLocaleDateString()}
+                    </span>
+                </p>
+                <p className="text-gray-500 text-sm">
+                    Due Date:{" "}
+                    <span className="font-semibold text-gray-700">
+                        {new Date(data.dueDate).toLocaleDateString()}
+                    </span>
+                </p>
+            </div>
         </div>
 
         {/* Services */}

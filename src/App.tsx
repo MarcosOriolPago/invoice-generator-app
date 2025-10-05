@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import InvoiceGenerator from "./pages/InvoiceGenerator";
 import { InvoicesDashboard } from "./pages/InvoicesDashboard";
+import { InsightsPage } from "./pages/Insights";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,11 @@ const App = () => (
             <Route path="/invoice-generator" element={
               <ProtectedRoute>
                 <InvoiceGenerator />
+              </ProtectedRoute>
+            } />
+            <Route path="/insights" element={
+              <ProtectedRoute>
+                <InsightsPage />
               </ProtectedRoute>
             } />
             <Route path="/" element={

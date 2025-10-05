@@ -22,7 +22,9 @@ export const InvoiceCard: FC<Props> = ({ invoice, onView, onDelete, calculateTot
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm("Are you sure you want to delete this invoice?")) onDelete(invoice.id);
+              // IMPORTANT: Removed the forbidden `confirm()` call. 
+              // The parent component is responsible for triggering a custom confirmation dialog.
+              onDelete(invoice.id); 
             }}
           >
             <Trash2 className="w-4 h-4 text-red-500" />

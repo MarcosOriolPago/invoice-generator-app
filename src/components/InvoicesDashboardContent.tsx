@@ -5,10 +5,11 @@ import { useAuth } from "@/hooks/useAuth"
 import { InvoiceCard } from "@/components/InvoiceCard"
 import { InvoiceToolbar } from "@/components/InvoiceToolbar"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner" // Assuming sonner is available
 
 export const InvoicesDashboardContent = () => {
   const { user } = useAuth()
@@ -41,28 +42,16 @@ export const InvoicesDashboardContent = () => {
       return
     }
 
-    console.log("Active session:", session)
-
     if (!session) {
       console.warn("No active session → queries will be anonymous!")
       return
     }
 
-    // 2. Fetch without filtering first (helpful for debugging RLS)
-    const { data: allInvoices, error: fetchAllError } = await supabase
-      .from("invoices")
-      .select("*")
-
-    if (fetchAllError) {
-      console.error("Error fetching ALL invoices:", fetchAllError)
-    } else {
-      console.log("All invoices in DB:", allInvoices)
-    }
-
-    // 3. Fetch filtered by logged-in user (this is what the UI needs)
+    // 2. Fetch filtered by logged-in user (this is what the UI needs)
     const { data, error } = await supabase
       .from("invoices")
-      .select("*")
+      // Ensure we select the new pdf_path column
+      .select("*, pdf_path")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
 
@@ -71,7 +60,6 @@ export const InvoicesDashboardContent = () => {
       return
     }
 
-    console.log("Invoices for this user:", data)
     setInvoices(data || [])
   }
 
@@ -84,32 +72,37 @@ export const InvoicesDashboardContent = () => {
   }
 
   const handleConfirmDelete = async () => {
-    if (!confirmDeleteId) {
+    if (!confirmDeleteId || !user) {
       setConfirmOpen(false)
       return
     }
 
     setIsDeleting(true)
-
-    // ensure session user id is used for ownership check
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
-
-    if (sessionError) {
-      console.error("Error fetching session:", sessionError)
-      setIsDeleting(false)
-      return
+    
+    const userId = user.id
+    
+    // 1. Optional: Delete the PDF file from storage first
+    const pdfPath = confirmDeleteInvoice?.pdf_path;
+    if (pdfPath && pdfPath.includes('invoices_pdfs/')) {
+        try {
+            // Extract the path after the bucket name for the Supabase remove function
+            const storagePath = pdfPath.split('invoices_pdfs/')[1];
+            if (storagePath) {
+                const { error: storageError } = await supabase.storage
+                    .from('invoices_pdfs')
+                    .remove([storagePath]);
+                    
+                if (storageError) {
+                    console.warn("Failed to delete PDF from storage:", storageError);
+                    toast.warning("Failed to delete the associated PDF file from storage, but continuing with DB record deletion.");
+                }
+            }
+        } catch (e) {
+            console.warn("Error processing PDF path for deletion:", e);
+        }
     }
 
-    const userId = session?.user?.id ?? user?.id
-    if (!userId) {
-      console.error("No user id available to perform delete")
-      setIsDeleting(false)
-      return
-    }
-
+    // 2. Delete the database record
     const { error } = await supabase
       .from("invoices")
       .delete()
@@ -122,6 +115,7 @@ export const InvoicesDashboardContent = () => {
 
     if (error) {
       console.error("Error deleting invoice:", error)
+      toast.error("Failed to delete invoice from database.");
       return
     }
 
@@ -130,6 +124,7 @@ export const InvoicesDashboardContent = () => {
     setConfirmDeleteId(null)
     setConfirmDeleteInvoice(null)
     setConfirmInput("")
+    toast.success("Invoice successfully deleted.");
   }
 
   const calculateInvoiceTotal = (invoice: any) => {
@@ -209,7 +204,8 @@ export const InvoicesDashboardContent = () => {
             >
               <InvoiceCard
                 invoice={invoice}
-                onView={() => navigate(`/invoice/${invoice.id}`)}
+                // Updated navigation to the new detail page
+                onView={() => navigate(`/invoice/${invoice.id}`)} 
                 onDelete={() => requestDelete(invoice)}
                 calculateTotal={calculateInvoiceTotal}
               />
@@ -251,6 +247,11 @@ export const InvoicesDashboardContent = () => {
             <span className="font-medium">{requiredConfirmText}</span> below and press{" "}
             <strong>Delete</strong>.
           </p>
+          {confirmDeleteInvoice?.pdf_path && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <Trash2 className="w-3 h-3"/> This will also delete the saved PDF file.
+            </p>
+          )}
 
           <div className="mb-4">
             <Input
