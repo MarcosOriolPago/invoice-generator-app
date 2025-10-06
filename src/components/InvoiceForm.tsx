@@ -150,8 +150,8 @@ const generateNextInvoiceNumber = async (userId: string): Promise<string> => {
     if (data && data.length > 0) {
       // Find the highest invoice number among recent invoices
       for (const invoice of data) {
-        if (invoice.data && invoice.data.invoiceNumber) {
-          const invoiceNumber = invoice.data.invoiceNumber;
+        if (invoice.data && typeof invoice.data === 'object' && 'invoiceNumber' in invoice.data) {
+          const invoiceNumber = (invoice.data as any).invoiceNumber;
           // Extract number from format like "INV-001", "INV-0123", etc.
           const numberMatch = invoiceNumber.match(/INV-(\d+)/);
           if (numberMatch) {
@@ -189,15 +189,14 @@ const createPdfAndUpload = async (invoiceData: InvoiceData, htmlElement: HTMLDiv
   try {
     // 1. Generate canvas from HTML with high quality settings
     const canvas = await html2canvas(htmlElement, {
-      scale: 4, // Much higher resolution for better quality
+      scale: 3,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
-      letterRendering: true,
       windowWidth: htmlElement.scrollWidth,
       windowHeight: htmlElement.scrollHeight,
-      scrollY: -window.scrollY, // Correctly captures the hidden element
+      scrollY: -window.scrollY,
       x: 0,
       y: 0,
       width: htmlElement.scrollWidth,

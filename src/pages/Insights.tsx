@@ -67,7 +67,8 @@ const calculateInvoiceTotal = (invoice: any) => {
 const aggregateEarnings = (invoices: InvoiceRecord[]): EarningsDataPoint[] => {
   const dailyEarningsMap = new Map<string, number>();
 
-  invoices.forEach((invoice) => {
+  // Only count paid invoices
+  invoices.filter((inv: any) => inv.payment_status === 'paid').forEach((invoice) => {
     const total = calculateInvoiceTotal(invoice);
     // Use the invoice date for aggregation, falling back to created_at date part
     const date = invoice.data.invoiceDate || invoice.created_at.split('T')[0]; 
@@ -169,36 +170,48 @@ export const InsightsPage = () => {
             </p>
 
             {/* Date Range Selector and Summary */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="text-professional">Filter Period</CardTitle>
-                <CardDescription>Select a date range to view earnings.</CardDescription>
+            <Card className="mb-8 border-2 border-primary/20 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  Filter Period
+                </CardTitle>
+                <CardDescription className="text-base">Select a date range to view earnings from paid invoices.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
+                  <div className="space-y-2 group">
+                    <Label htmlFor="startDate" className="text-base font-semibold">Start Date</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="pl-10 border-2 focus:border-primary transition-all duration-300 hover:border-primary/50"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                  <div className="space-y-2 group">
+                    <Label htmlFor="endDate" className="text-base font-semibold">End Date</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="pl-10 border-2 focus:border-primary transition-all duration-300 hover:border-primary/50"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2 flex flex-col justify-end">
-                    <Card className="p-3 bg-primary/10 border-primary/30">
-                      <p className="text-sm font-medium text-primary">Total Earnings</p>
-                      <p className="text-2xl font-bold text-primary">${totalEarnings.toFixed(2)}</p>
-                      <p className="text-xs text-primary/70">{startDate} to {endDate}</p>
+                    <Card className="p-4 bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border-2 border-primary/40 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <p className="text-sm font-semibold text-primary/80 mb-1">Total Earnings (Paid)</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                        ${totalEarnings.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-primary/60 mt-1">{startDate} to {endDate}</p>
                     </Card>
                   </div>
                 </div>

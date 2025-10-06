@@ -6,13 +6,12 @@ export const generatePDF = async (invoiceElement: HTMLElement, data: InvoiceData
   try {
     // Create canvas from HTML element with high quality settings
     const canvas = await html2canvas(invoiceElement, {
-      scale: 4, // Much higher scale for crisp quality
+      scale: 3,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       removeContainer: true,
       logging: false,
-      letterRendering: true,
       windowWidth: invoiceElement.scrollWidth,
       windowHeight: invoiceElement.scrollHeight,
       x: 0,
@@ -21,35 +20,56 @@ export const generatePDF = async (invoiceElement: HTMLElement, data: InvoiceData
       height: invoiceElement.scrollHeight,
     });
 
-    // Calculate dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
+    // PDF settings with margins
+    const pdfWidth = 210; // A4 width in mm
+    const pdfHeight = 297; // A4 height in mm
+    const margin = 15; // 15mm margins
+    const contentWidth = pdfWidth - (2 * margin);
+    const contentHeight = pdfHeight - (2 * margin);
+    
+    // Calculate scaled dimensions
+    const imgWidth = contentWidth;
+    const imgHeight = (canvas.height * contentWidth) / canvas.width;
 
-    // Create PDF with high quality settings
+    // Create PDF
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
-      compress: false, // Disable compression for better quality
-      precision: 16 // Higher precision
+      compress: false,
+      precision: 16
     });
-    let position = 0;
 
-    // Convert canvas to high quality JPEG
-    const imgData = canvas.toDataURL('image/jpeg', 0.98); // High quality JPEG
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
     
-    // Add first page
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, '', 'FAST');
-    heightLeft -= pageHeight;
+    let heightLeft = imgHeight;
+    let position = 0;
+    let pageNumber = 1;
+
+    // Add first page with margins
+    pdf.addImage(imgData, 'JPEG', margin, margin + position, imgWidth, imgHeight, '', 'FAST');
+    
+    // Add page number
+    pdf.setFontSize(10);
+    pdf.setTextColor(150);
+    pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 10, { align: 'center' });
+    
+    heightLeft -= contentHeight;
 
     // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
+    while (heightLeft > 0) {
+      position = -(imgHeight - heightLeft);
       pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, '', 'FAST');
-      heightLeft -= pageHeight;
+      pageNumber++;
+      
+      pdf.addImage(imgData, 'JPEG', margin, margin + position, imgWidth, imgHeight, '', 'FAST');
+      
+      // Add page number
+      pdf.setFontSize(10);
+      pdf.setTextColor(150);
+      pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 10, { align: 'center' });
+      
+      heightLeft -= contentHeight;
     }
 
     // Generate filename

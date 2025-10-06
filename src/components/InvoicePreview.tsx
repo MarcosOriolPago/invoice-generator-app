@@ -66,9 +66,15 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
         {/* Header */}
         <div className="flex justify-between items-start mb-10 pb-6 border-b border-gray-200">
           <div className="flex-1">
-            {userConfig?.company_name && (
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">{userConfig.company_name}</h1>
-            )}
+            <div className="flex items-center gap-4 mb-4">
+              <img src="/logo_mop_clean.svg" alt="Logo" className="h-16 w-16" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Marcos Solutions</h1>
+                {userConfig?.company_name && userConfig.company_name !== 'Marcos Solutions' && (
+                  <p className="text-lg text-gray-700">{userConfig.company_name}</p>
+                )}
+              </div>
+            </div>
             {userConfig?.company_address && (
               <p className="text-sm text-gray-600 mb-2 whitespace-pre-line">{userConfig.company_address}</p>
             )}

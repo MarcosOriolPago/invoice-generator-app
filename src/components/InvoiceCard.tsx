@@ -19,6 +19,7 @@ interface Props {
   onDelete: (id: string) => void;
   calculateTotal: (inv: any) => number;
   onMoveToSpace?: (spaceId: string | null) => void;
+  onTogglePaymentStatus?: () => void;
   spaces?: Array<{ id: string; name: string; color: string }>;
 }
 
@@ -28,11 +29,16 @@ export const InvoiceCard: FC<Props> = ({
   onDelete, 
   calculateTotal,
   onMoveToSpace,
+  onTogglePaymentStatus,
   spaces = []
 }) => {
+  const isPaid = invoice.payment_status === 'paid';
+  const borderColor = isPaid ? 'border-green-200' : 'border-red-200';
+  const bgColor = isPaid ? 'bg-green-50/30' : 'bg-red-50/30';
+  
   return (
     <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <Card className="hover:shadow-lg transition-all cursor-pointer border hover:border-primary/30 group">
+      <Card className={`hover:shadow-lg transition-all cursor-pointer border hover:border-primary/30 group ${borderColor} ${bgColor}`}>
         <CardHeader className="pb-2 flex flex-row justify-between items-start">
           <CardTitle className="text-lg font-semibold truncate flex-1" onClick={onView}>
             {invoice.data.invoiceNumber}
@@ -43,14 +49,22 @@ export const InvoiceCard: FC<Props> = ({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-50 bg-background">
+              {onTogglePaymentStatus && (
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePaymentStatus();
+                }}>
+                  {isPaid ? '✓ Mark as Unpaid' : '✓ Mark as Paid'}
+                </DropdownMenuItem>
+              )}
               {onMoveToSpace && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <FolderInput className="h-4 w-4 mr-2" />
                     Move to Space
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
+                  <DropdownMenuSubContent className="z-50 bg-background">
                     {invoice.space_id && (
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();
@@ -92,9 +106,14 @@ export const InvoiceCard: FC<Props> = ({
           </DropdownMenu>
         </CardHeader>
         <CardContent className="space-y-2" onClick={onView}>
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-success" />
-            <span className="font-bold text-success">${calculateTotal(invoice).toFixed(2)}</span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-success" />
+              <span className="font-bold text-success">${calculateTotal(invoice).toFixed(2)}</span>
+            </div>
+            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {isPaid ? 'Paid' : 'Unpaid'}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Calendar className="w-4 h-4" />

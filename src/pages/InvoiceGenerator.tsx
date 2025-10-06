@@ -70,7 +70,7 @@ const InvoiceGenerator = () => {
       }
       
       // Set the invoice data for editing
-      setInvoiceData(data.data);
+      setInvoiceData(data.data as InvoiceData);
       toast.success("Invoice loaded for editing");
     } catch (error) {
       console.error("Error loading invoice for edit:", error);

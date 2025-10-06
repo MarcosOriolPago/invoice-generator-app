@@ -49,6 +49,8 @@ export type Database = {
           created_at: string
           data: Json
           id: string
+          paid_at: string | null
+          payment_status: string | null
           pdf_path: string | null
           space_id: string | null
           updated_at: string
@@ -58,6 +60,8 @@ export type Database = {
           created_at?: string
           data: Json
           id?: string
+          paid_at?: string | null
+          payment_status?: string | null
           pdf_path?: string | null
           space_id?: string | null
           updated_at?: string
@@ -67,6 +71,8 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: string
+          paid_at?: string | null
+          payment_status?: string | null
           pdf_path?: string | null
           space_id?: string | null
           updated_at?: string

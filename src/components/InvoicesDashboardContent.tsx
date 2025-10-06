@@ -295,6 +295,23 @@ export const InvoicesDashboardContent = () => {
                     onDelete={() => requestDelete(invoice)}
                     calculateTotal={calculateInvoiceTotal}
                     onMoveToSpace={(spaceId) => handleMoveToSpace(invoice.id, spaceId)}
+                    onTogglePaymentStatus={async () => {
+                      const newStatus = invoice.payment_status === 'paid' ? 'unpaid' : 'paid';
+                      const { error } = await supabase
+                        .from('invoices')
+                        .update({ 
+                          payment_status: newStatus,
+                          paid_at: newStatus === 'paid' ? new Date().toISOString() : null
+                        })
+                        .eq('id', invoice.id)
+                        .eq('user_id', user!.id);
+                      if (error) {
+                        toast.error('Failed to update payment status');
+                      } else {
+                        toast.success(`Invoice marked as ${newStatus}`);
+                        fetchInvoices();
+                      }
+                    }}
                     spaces={spaces}
                   />
                 </motion.div>
@@ -357,6 +374,23 @@ export const InvoicesDashboardContent = () => {
                     onDelete={() => requestDelete(invoice)}
                     calculateTotal={calculateInvoiceTotal}
                     onMoveToSpace={(spaceId) => handleMoveToSpace(invoice.id, spaceId)}
+                    onTogglePaymentStatus={async () => {
+                      const newStatus = invoice.payment_status === 'paid' ? 'unpaid' : 'paid';
+                      const { error } = await supabase
+                        .from('invoices')
+                        .update({ 
+                          payment_status: newStatus,
+                          paid_at: newStatus === 'paid' ? new Date().toISOString() : null
+                        })
+                        .eq('id', invoice.id)
+                        .eq('user_id', user!.id);
+                      if (error) {
+                        toast.error('Failed to update payment status');
+                      } else {
+                        toast.success(`Invoice marked as ${newStatus}`);
+                        fetchInvoices();
+                      }
+                    }}
                     spaces={spaces}
                   />
                 </motion.div>
