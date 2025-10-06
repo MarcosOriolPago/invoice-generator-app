@@ -37,7 +37,7 @@ export const generatePDF = async (
       unit: 'mm',
       format: 'a4',
       compress: true,
-      precision: 8
+      precision: 12
     });
 
     const pageHeightPx = (contentHeight * canvas.width) / imgWidth; // content area in canvas px
