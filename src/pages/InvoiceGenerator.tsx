@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { InvoiceForm, InvoiceData } from "@/components/InvoiceForm";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { generatePDF } from "@/utils/pdfGenerator";
@@ -14,12 +14,15 @@ import { useAuth } from "@/hooks/useAuth";
 
 const InvoiceGenerator = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [userConfig, setUserConfig] = useState<any>(null);
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +42,43 @@ const InvoiceGenerator = () => {
     };
     fetchUserConfig();
   }, [user]);
+
+  // Handle edit mode - load existing invoice data
+  useEffect(() => {
+    const editIdParam = searchParams.get('edit');
+    if (editIdParam && user) {
+      setEditId(editIdParam);
+      loadInvoiceForEdit(editIdParam);
+    } else {
+      setEditId(null);
+      setInvoiceData(null);
+    }
+  }, [searchParams, user]);
+
+  const loadInvoiceForEdit = async (invoiceId: string) => {
+    setIsLoadingEditData(true);
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .eq('user_id', user?.id)
+        .single();
+        
+      if (error || !data) {
+        throw new Error("Invoice not found or access denied.");
+      }
+      
+      // Set the invoice data for editing
+      setInvoiceData(data.data);
+      toast.success("Invoice loaded for editing");
+    } catch (error) {
+      console.error("Error loading invoice for edit:", error);
+      toast.error("Failed to load invoice data");
+    } finally {
+      setIsLoadingEditData(false);
+    }
+  };
 
   const handleInvoiceSubmit = (data: InvoiceData) => {
     setInvoiceData(data);
@@ -85,7 +125,20 @@ const InvoiceGenerator = () => {
 
         {!showPreview ? (
           <div className="max-w-4xl mx-auto">
-            <InvoiceForm onSubmit={handleInvoiceSubmit} initialData={invoiceData || undefined} />
+            {isLoadingEditData ? (
+              <div className="flex justify-center items-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading invoice data...</p>
+                </div>
+              </div>
+            ) : (
+              <InvoiceForm 
+                onSubmit={handleInvoiceSubmit} 
+                initialData={invoiceData || undefined} 
+                editId={editId}
+              />
+            )}
           </div>
         ) : (
           <div className="space-y-6">

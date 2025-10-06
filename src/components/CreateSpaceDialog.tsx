@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,9 @@ export const CreateSpaceDialog = ({ open, onOpenChange, onSpaceCreated }: Create
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Space</DialogTitle>
+          <DialogDescription>
+            Create a new space to organize your invoices. You can categorize invoices by client, project, or time period.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>

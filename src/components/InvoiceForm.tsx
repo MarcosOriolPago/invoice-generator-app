@@ -55,6 +55,7 @@ export type InvoiceData = z.infer<typeof invoiceSchema>;
 interface InvoiceFormProps {
   onSubmit: (data: InvoiceData) => void;
   initialData?: Partial<InvoiceData>;
+  editId?: string | null;
 }
 
 /* ---------------- SUBTASK COMPONENT ---------------- */
@@ -126,6 +127,57 @@ const SubtasksFieldArray = ({ nestIndex, control, register }) => {
   );
 };
 
+/* ---------------- INVOICE NUMBER GENERATION UTILITY ---------------- */
+
+const generateNextInvoiceNumber = async (userId: string): Promise<string> => {
+  try {
+    // Get recent invoices for this user to find the highest number
+    // Using limit and recent data should be sufficient for most cases
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('data')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100); // Limit to recent 100 invoices for performance
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching invoices for numbering:', error);
+      return 'INV-001'; // Default to first invoice if query fails
+    }
+
+    let highestNumber = 0;
+    
+    if (data && data.length > 0) {
+      // Find the highest invoice number among recent invoices
+      for (const invoice of data) {
+        if (invoice.data && invoice.data.invoiceNumber) {
+          const invoiceNumber = invoice.data.invoiceNumber;
+          // Extract number from format like "INV-001", "INV-0123", etc.
+          const numberMatch = invoiceNumber.match(/INV-(\d+)/);
+          if (numberMatch) {
+            const currentNumber = parseInt(numberMatch[1], 10);
+            if (currentNumber > highestNumber) {
+              highestNumber = currentNumber;
+            }
+          }
+        }
+      }
+      
+      // If we hit the limit, there might be higher numbers in older invoices
+      // In that case, we should query more or add a database function
+      // For now, this should work for most use cases
+    }
+    
+    const nextNumber = highestNumber + 1;
+    
+    // Format with leading zeros (3 digits minimum)
+    return `INV-${nextNumber.toString().padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error generating invoice number:', error);
+    return 'INV-001'; // Fallback to default
+  }
+};
+
 /* ---------------- PDF GENERATION & UPLOAD UTILITY ---------------- */
 
 const createPdfAndUpload = async (invoiceData: InvoiceData, htmlElement: HTMLDivElement, userId: string): Promise<string | null> => {
@@ -135,18 +187,32 @@ const createPdfAndUpload = async (invoiceData: InvoiceData, htmlElement: HTMLDiv
   }
   
   try {
-    // 1. Generate canvas from HTML
+    // 1. Generate canvas from HTML with high quality settings
     const canvas = await html2canvas(htmlElement, {
-      scale: 2, // Use higher resolution for better quality
+      scale: 4, // Much higher resolution for better quality
       useCORS: true,
-      windowWidth: htmlElement.offsetWidth,
-      windowHeight: htmlElement.offsetHeight,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      letterRendering: true,
+      windowWidth: htmlElement.scrollWidth,
+      windowHeight: htmlElement.scrollHeight,
       scrollY: -window.scrollY, // Correctly captures the hidden element
+      x: 0,
+      y: 0,
+      width: htmlElement.scrollWidth,
+      height: htmlElement.scrollHeight,
     });
 
-    // 2. Convert canvas to PDF using jsPDF
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    // 2. Convert canvas to PDF using jsPDF with high quality
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: false,
+      precision: 16
+    });
     
     // Calculate dimensions for A4
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -203,11 +269,46 @@ const createPdfAndUpload = async (invoiceData: InvoiceData, htmlElement: HTMLDiv
 
 /* ---------------- MAIN FORM ---------------- */
 
-export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
+export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { user } = useAuth();
   const invoicePreviewRef = useRef<HTMLDivElement>(null); // Ref for the hidden preview component
   const [userConfig, setUserConfig] = useState<UserConfig | null>(null);
+  const [generatedInvoiceNumber, setGeneratedInvoiceNumber] = useState<string>('');
+
+  const form = useForm<InvoiceData>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      invoiceNumber:
+        initialData?.invoiceNumber || generatedInvoiceNumber || 'INV-001',
+      invoiceDate:
+        initialData?.invoiceDate || new Date().toISOString().split("T")[0],
+      dueDate:
+        initialData?.dueDate ||
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+      clientName: initialData?.clientName || "",
+      clientEmail: initialData?.clientEmail || "",
+      clientAddress: initialData?.clientAddress || "",
+      services: initialData?.services || [
+        {
+          title: "Website Development",
+          description: "Building a responsive website",
+          rate: 50,
+          subtasks: [
+            { title: "Frontend", description: "React components", hours: 10 },
+          ],
+        },
+      ],
+      notes: initialData?.notes || "",
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "services",
+  });
 
   useEffect(() => {
     const fetchUserConfig = async () => {
@@ -228,36 +329,43 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
     fetchUserConfig();
   }, [user]);
 
-  const form = useForm<InvoiceData>({
-    resolver: zodResolver(invoiceSchema),
-    defaultValues: {
-      invoiceNumber:
-        initialData?.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
-      invoiceDate:
-        initialData?.invoiceDate || new Date().toISOString().split("T")[0],
-      dueDate:
-        initialData?.dueDate ||
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-      services: initialData?.services || [
-        {
-          title: "Website Development",
-          description: "Building a responsive website",
-          rate: 50,
-          subtasks: [
-            { title: "Frontend", description: "React components", hours: 10 },
-          ],
-        },
-      ],
-      notes: initialData?.notes || "",
-    },
-  });
+  // Generate sequential invoice number for new invoices
+  useEffect(() => {
+    const generateInvoiceNumber = async () => {
+      if (!user || editId || initialData?.invoiceNumber) return; // Don't generate for edit mode or if already provided
+      
+      try {
+        const nextNumber = await generateNextInvoiceNumber(user.id);
+        setGeneratedInvoiceNumber(nextNumber);
+        
+        // Update form with the generated number
+        form.setValue('invoiceNumber', nextNumber);
+      } catch (error) {
+        console.error('Failed to generate invoice number:', error);
+        const fallback = 'INV-001';
+        setGeneratedInvoiceNumber(fallback);
+        form.setValue('invoiceNumber', fallback);
+      }
+    };
+    
+    generateInvoiceNumber();
+  }, [user, editId, initialData?.invoiceNumber, form]);
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "services",
-  });
+  // Reset form when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        invoiceNumber: initialData.invoiceNumber,
+        invoiceDate: initialData.invoiceDate,
+        dueDate: initialData.dueDate,
+        clientName: initialData.clientName || "",
+        clientEmail: initialData.clientEmail || "",
+        clientAddress: initialData.clientAddress || "",
+        services: initialData.services || [],
+        notes: initialData.notes || "",
+      });
+    }
+  }, [initialData, form]);
 
   const handleSubmit = async (invoiceData: InvoiceData) => {
     if (!user) {
@@ -281,22 +389,39 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
       }
 
       // 2. Persist invoice data and PDF path to DB
-      const { error } = await supabase
-        .from("invoices")
-        .insert({
-          user_id: user.id,
-          data: invoiceData,
-          pdf_path: pdfPath, // Save the public URL to the invoice record
-        });
+      let dbError;
+      if (editId) {
+        // Update existing invoice
+        const { error } = await supabase
+          .from("invoices")
+          .update({
+            data: invoiceData,
+            pdf_path: pdfPath,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editId)
+          .eq('user_id', user.id);
+        dbError = error;
+      } else {
+        // Create new invoice
+        const { error } = await supabase
+          .from("invoices")
+          .insert({
+            user_id: user.id,
+            data: invoiceData,
+            pdf_path: pdfPath,
+          });
+        dbError = error;
+      }
 
-      if (error) {
-        console.error("Failed to save invoice:", error);
+      if (dbError) {
+        console.error("Failed to save invoice:", dbError);
         throw new Error("Failed to save invoice data to DB.");
       }
       
       // 3. Call parent onSubmit and navigate away
       onSubmit(invoiceData); 
-      toast.success("Invoice saved and generated!");
+      toast.success(editId ? "Invoice updated successfully!" : "Invoice saved and generated!");
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -400,7 +525,7 @@ export const InvoiceForm = ({ onSubmit, initialData }: InvoiceFormProps) => {
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Rate ($/hr)</Label>
+                  <Label>Rate (€/hr)</Label>
                   <Input
                     type="number"
                     step="1"

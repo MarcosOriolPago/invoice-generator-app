@@ -35,6 +35,28 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
 
     const tax = 0; // extend if you need taxes
     const total = subtotal + tax;
+    
+    // Get currency symbol from user config, default to USD
+    const getCurrencySymbol = (currency: string | undefined) => {
+      const currencyMap: { [key: string]: string } = {
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+        'JPY': '¥',
+        'CAD': 'C$',
+        'AUD': 'A$',
+        'CHF': 'CHF',
+        'CNY': '¥',
+        'SEK': 'kr',
+        'NOK': 'kr',
+        'MXN': '$',
+        'INR': '₹',
+        'BRL': 'R$',
+      };
+      return currencyMap[currency || 'USD'] || currency || '$';
+    };
+    
+    const currencySymbol = getCurrencySymbol(userConfig?.default_currency);
 
     return (
       <div
@@ -58,7 +80,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
             </div>
           </div>
           <div className="text-right">
-            <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight mb-4">INVOICE</h1>
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <p className="text-xs text-gray-600 uppercase mb-1">Invoice Number</p>
               <p className="text-2xl font-bold text-blue-600">{data.invoiceNumber}</p>
@@ -117,7 +138,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Rate</p>
                   <p className="font-semibold text-gray-900">
-                    ${service.rate.toFixed(2)}/hr
+                    {currencySymbol}{service.rate.toFixed(2)}/hr
                   </p>
                 </div>
               </div>
@@ -144,10 +165,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                         {subtask.hours}
                       </div>
                       <div className="col-span-2 text-center text-gray-700">
-                        ${service.rate.toFixed(2)}
+                        {currencySymbol}{service.rate.toFixed(2)}
                       </div>
                       <div className="col-span-2 text-right font-semibold text-gray-900">
-                        ${(subtask.hours * service.rate).toFixed(2)}
+                        {currencySymbol}{(subtask.hours * service.rate).toFixed(2)}
                       </div>
                     </div>
                   ))}
@@ -160,7 +181,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                   Service Total
                 </span>
                 <span className="text-base font-bold text-gray-900">
-                  ${calculateServiceTotal(service).toFixed(2)}
+                  {currencySymbol}{calculateServiceTotal(service).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -174,19 +195,19 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
               <div className="flex justify-between py-2 border-b border-gray-200">
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-semibold">
-                  ${subtotal.toFixed(2)}
+                  {currencySymbol}{subtotal.toFixed(2)}
                 </span>
               </div>
               {tax > 0 && (
                 <div className="flex justify-between py-2 border-b border-gray-200">
                   <span className="text-gray-600">Tax:</span>
-                  <span className="font-semibold">${tax.toFixed(2)}</span>
+                  <span className="font-semibold">{currencySymbol}{tax.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between py-3 border-t-2 border-gray-300">
                 <span className="text-lg font-bold text-gray-900">Total:</span>
                 <span className="text-lg font-bold text-blue-600">
-                  ${total.toFixed(2)}
+                  {currencySymbol}{total.toFixed(2)}
                 </span>
               </div>
             </div>
