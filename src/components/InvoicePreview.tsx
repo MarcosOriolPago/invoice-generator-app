@@ -61,6 +61,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
     return (
       <div
         ref={ref}
+        data-invoice-preview
         className="bg-white p-10 shadow-xl max-w-4xl mx-auto rounded-lg border border-gray-200"
       >
         {/* Header */}

@@ -4,9 +4,9 @@ import { InvoiceData } from '@/components/InvoiceForm';
 
 export const generatePDF = async (invoiceElement: HTMLElement, data: InvoiceData): Promise<void> => {
   try {
-    // Create canvas from HTML element with high quality settings
+    // Create canvas from HTML element with very high quality settings for SVG clarity
     const canvas = await html2canvas(invoiceElement, {
-      scale: 3,
+      scale: 4, // Higher scale for better quality
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
@@ -18,14 +18,23 @@ export const generatePDF = async (invoiceElement: HTMLElement, data: InvoiceData
       y: 0,
       width: invoiceElement.scrollWidth,
       height: invoiceElement.scrollHeight,
+      imageTimeout: 0,
+      onclone: (clonedDoc) => {
+        const clonedElement = clonedDoc.querySelector('[data-invoice-preview]');
+        if (clonedElement) {
+          // Remove any rounded borders for PDF
+          (clonedElement as HTMLElement).style.borderRadius = '0';
+          (clonedElement as HTMLElement).style.border = 'none';
+        }
+      }
     });
 
-    // PDF settings with margins
+    // PDF settings with 1-inch (25.4mm) margins
     const pdfWidth = 210; // A4 width in mm
     const pdfHeight = 297; // A4 height in mm
-    const margin = 15; // 15mm margins
+    const margin = 25.4; // 1 inch margins
     const contentWidth = pdfWidth - (2 * margin);
-    const contentHeight = pdfHeight - (2 * margin);
+    const contentHeight = pdfHeight - (2 * margin) - 10; // Reserve space for page number
     
     // Calculate scaled dimensions
     const imgWidth = contentWidth;
@@ -36,38 +45,39 @@ export const generatePDF = async (invoiceElement: HTMLElement, data: InvoiceData
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
-      compress: false,
+      compress: true,
       precision: 16
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    // Use PNG for better quality (especially for SVG elements)
+    const imgData = canvas.toDataURL('image/png', 1.0);
     
     let heightLeft = imgHeight;
     let position = 0;
     let pageNumber = 1;
 
     // Add first page with margins
-    pdf.addImage(imgData, 'JPEG', margin, margin + position, imgWidth, imgHeight, '', 'FAST');
+    pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight, '', 'FAST');
     
     // Add page number
-    pdf.setFontSize(10);
-    pdf.setTextColor(150);
-    pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 10, { align: 'center' });
+    pdf.setFontSize(9);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 15, { align: 'center' });
     
     heightLeft -= contentHeight;
 
-    // Add additional pages if needed
+    // Add additional pages if needed with proper content flow
     while (heightLeft > 0) {
-      position = -(imgHeight - heightLeft);
+      position = heightLeft - imgHeight;
       pdf.addPage();
       pageNumber++;
       
-      pdf.addImage(imgData, 'JPEG', margin, margin + position, imgWidth, imgHeight, '', 'FAST');
+      pdf.addImage(imgData, 'PNG', margin, position + margin, imgWidth, imgHeight, '', 'FAST');
       
       // Add page number
-      pdf.setFontSize(10);
-      pdf.setTextColor(150);
-      pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 10, { align: 'center' });
+      pdf.setFontSize(9);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Page ${pageNumber}`, pdfWidth / 2, pdfHeight - 15, { align: 'center' });
       
       heightLeft -= contentHeight;
     }
