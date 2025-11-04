@@ -33,7 +33,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
       0
     );
 
-    const tax = 0; // extend if you need taxes
+    const taxRate = data.taxRate ?? 21; // Default to 21% IVA
+    const tax = subtotal * (taxRate / 100);
     const total = subtotal + tax;
     
     // Get currency symbol from user config, default to USD
@@ -106,13 +107,13 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                 <div>
                     <p className="text-xs text-gray-500 uppercase">Invoice Date</p>
                     <p className="font-semibold text-gray-900">
-                        {new Date(data.invoiceDate).toISOString().split("T")[0]}
+                        {new Date(data.invoiceDate).toLocaleDateString()}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-gray-500 uppercase">Due Date</p>
                     <p className="font-semibold text-gray-900">
-                        {new Date(data.dueDate).toISOString().split("T")[0]}
+                        {new Date(data.dueDate).toLocaleDateString()}
                     </p>
                 </div>
                 {userConfig?.default_payment_terms && (
@@ -207,7 +208,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
               </div>
               {tax > 0 && (
                 <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Tax:</span>
+                  <span className="text-gray-600">IVA ({taxRate}%):</span>
                   <span className="font-semibold">{currencySymbol}{tax.toFixed(2)}</span>
                 </div>
               )}

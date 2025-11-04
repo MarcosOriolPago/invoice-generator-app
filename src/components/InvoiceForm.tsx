@@ -39,6 +39,7 @@ const invoiceSchema = z.object({
   clientAddress: z.string().optional(),
   services: z.array(serviceItemSchema).min(1, "At least one service is required"),
   notes: z.string().optional(),
+  taxRate: z.number().min(0).max(100).default(21),
 });
 
 interface UserConfig {
@@ -301,6 +302,7 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
         },
       ],
       notes: initialData?.notes || "",
+      taxRate: initialData?.taxRate ?? 21,
     },
   });
 
@@ -362,6 +364,7 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
         clientAddress: initialData.clientAddress || "",
         services: initialData.services || [],
         notes: initialData.notes || "",
+        taxRate: initialData.taxRate ?? 21,
       });
     }
   }, [initialData, form]);
@@ -492,6 +495,26 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
           <div className="space-y-2">
             <Label>Client Address (optional)</Label>
             <Textarea {...form.register("clientAddress")} placeholder="Client's Billing Address" rows={2} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tax Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tax</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label>IVA Tax Rate (%)</Label>
+            <Input 
+              type="number" 
+              step="0.01"
+              min="0"
+              max="100"
+              {...form.register("taxRate", { valueAsNumber: true })} 
+              placeholder="21"
+            />
           </div>
         </CardContent>
       </Card>
