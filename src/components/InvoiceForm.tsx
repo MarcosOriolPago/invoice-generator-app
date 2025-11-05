@@ -40,6 +40,7 @@ const invoiceSchema = z.object({
   services: z.array(serviceItemSchema).min(1, "At least one service is required"),
   notes: z.string().optional(),
   taxRate: z.number().min(0).max(100).default(21),
+  irpfRate: z.number().min(0).max(100).default(15),
 });
 
 interface UserConfig {
@@ -49,6 +50,8 @@ interface UserConfig {
   company_phone?: string;
   company_website?: string;
   bank_details?: string;
+  tax_rate?: number;
+  irpf_rate?: number;
 }
 
 export type InvoiceData = z.infer<typeof invoiceSchema>;
@@ -303,6 +306,7 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
       ],
       notes: initialData?.notes || "",
       taxRate: initialData?.taxRate ?? 21,
+      irpfRate: initialData?.irpfRate ?? 15,
     },
   });
 
@@ -365,6 +369,7 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
         services: initialData.services || [],
         notes: initialData.notes || "",
         taxRate: initialData.taxRate ?? 21,
+        irpfRate: initialData.irpfRate ?? 15,
       });
     }
   }, [initialData, form]);
@@ -502,19 +507,32 @@ export const InvoiceForm = ({ onSubmit, initialData, editId }: InvoiceFormProps)
       {/* Tax Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Tax</CardTitle>
+          <CardTitle>Tax Settings</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label>IVA Tax Rate (%)</Label>
-            <Input 
-              type="number" 
-              step="0.01"
-              min="0"
-              max="100"
-              {...form.register("taxRate", { valueAsNumber: true })} 
-              placeholder="21"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>IRPF Rate (%)</Label>
+              <Input 
+                type="number" 
+                step="0.01"
+                min="0"
+                max="100"
+                {...form.register("irpfRate", { valueAsNumber: true })} 
+                placeholder="15"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>IVA / VAT Rate (%)</Label>
+              <Input 
+                type="number" 
+                step="0.01"
+                min="0"
+                max="100"
+                {...form.register("taxRate", { valueAsNumber: true })} 
+                placeholder="21"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

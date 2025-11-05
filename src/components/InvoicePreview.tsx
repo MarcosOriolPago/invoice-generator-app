@@ -11,6 +11,8 @@ interface UserConfig {
   bank_details?: string;
   default_payment_terms?: string;
   default_currency?: string;
+  tax_rate?: number;
+  irpf_rate?: number;
 }
 
 interface InvoicePreviewProps {
@@ -33,9 +35,13 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
       0
     );
 
-    const taxRate = data.taxRate ?? 21; // Default to 21% IVA
-    const tax = subtotal * (taxRate / 100);
-    const total = subtotal + tax;
+    const taxRate = data.taxRate ?? userConfig?.tax_rate ?? 21;
+    const irpfRate = data.irpfRate ?? userConfig?.irpf_rate ?? 15;
+    
+    const irpfAmount = subtotal * (irpfRate / 100);
+    const afterIrpf = subtotal - irpfAmount;
+    const taxAmount = afterIrpf * (taxRate / 100);
+    const total = afterIrpf + taxAmount;
     
     // Get currency symbol from user config, default to USD
     const getCurrencySymbol = (currency: string | undefined) => {
@@ -206,10 +212,16 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                   {currencySymbol}{subtotal.toFixed(2)}
                 </span>
               </div>
-              {tax > 0 && (
+              {irpfRate > 0 && (
+                <div className="flex justify-between py-2 border-b border-gray-200">
+                  <span className="text-gray-600">IRPF ({irpfRate}%):</span>
+                  <span className="font-semibold text-red-600">-{currencySymbol}{irpfAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {taxRate > 0 && (
                 <div className="flex justify-between py-2 border-b border-gray-200">
                   <span className="text-gray-600">IVA ({taxRate}%):</span>
-                  <span className="font-semibold">{currencySymbol}{tax.toFixed(2)}</span>
+                  <span className="font-semibold">+{currencySymbol}{taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between py-3 border-t-2 border-gray-300">

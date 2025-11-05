@@ -24,6 +24,7 @@ interface UserConfig {
   company_website: string;
   tax_number: string;
   tax_rate: number;
+  irpf_rate: number;
   bank_details: string;
   default_payment_terms: string;
   default_currency: string;
@@ -48,7 +49,8 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
     bank_details: '',
     default_payment_terms: '30 days',
     default_currency: 'EUR',
-    tax_rate: 1,
+    tax_rate: 21,
+    irpf_rate: 15,
   });
 
   useEffect(() => {
@@ -84,7 +86,8 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
           bank_details: data.bank_details || '',
           default_payment_terms: data.default_payment_terms || '30 days',
           default_currency: data.default_currency || 'USD',
-          tax_rate: data.tax_rate || 1
+          tax_rate: data.tax_rate || 21,
+          irpf_rate: data.irpf_rate || 15
         });
       }
     } catch (error) {
@@ -227,15 +230,39 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="tax_rate">Tax Rate</Label>
+                <Label htmlFor="irpf_rate">IRPF Rate (%)</Label>
                 <div className="relative">
+                  <Hash className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="tax_rate"
-                    value={config.tax_rate}
-                    onChange={(e) => updateConfig('tax_rate', e.target.value)}
-                    placeholder="Tax rate"
+                    id="irpf_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={config.irpf_rate}
+                    onChange={(e) => updateConfig('irpf_rate', parseFloat(e.target.value) || 0)}
+                    className="pl-10"
+                    placeholder="15"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="tax_rate">IVA / VAT Rate (%)</Label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="tax_rate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={config.tax_rate}
+                  onChange={(e) => updateConfig('tax_rate', parseFloat(e.target.value) || 0)}
+                  className="pl-10"
+                  placeholder="21"
+                />
               </div>
             </div>
 

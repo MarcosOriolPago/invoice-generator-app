@@ -203,19 +203,22 @@ export const InvoicesDashboardContent = () => {
   const calculateInvoiceTotal = (invoice: any) => {
     const services =
       (invoice?.data?.services ?? invoice?.data?.services_list ?? invoice?.data?.services) || []
-    const tax = invoice?.data?.taxRate || 1;
+    const taxRate = invoice?.data?.taxRate || 0;
+    const irpfRate = invoice?.data?.irpfRate || 0;
 
-    return (
-      services?.reduce(
-        (sum: number, service: any) =>
-          sum +
-          (service?.subtasks?.reduce(
-            (s: number, st: any) => s + (st?.hours ?? 0) * (service?.rate ?? 0),
-            0
-          ) || 0),
-        0
-      ) || 0
-    ) * tax;
+    const subtotal = services?.reduce(
+      (sum: number, service: any) =>
+        sum +
+        (service?.subtasks?.reduce(
+          (s: number, st: any) => s + (st?.hours ?? 0) * (service?.rate ?? 0),
+          0
+        ) || 0),
+      0
+    ) || 0;
+
+    // Final = (subtotal - IRPF) + IVA applied to reduced price
+    // Final = subtotal * (1 - IRPF%) * (1 + IVA%)
+    return subtotal * (1 - irpfRate / 100) * (1 + taxRate / 100);
   }
 
   // helper that supports camelCase and snake_case keys

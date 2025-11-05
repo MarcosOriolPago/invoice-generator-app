@@ -127,8 +127,10 @@ export type Database = {
           default_currency: string | null
           default_payment_terms: string | null
           id: string
+          irpf_rate: number | null
           logo_url: string | null
           tax_number: string | null
+          tax_rate: number | null
           updated_at: string
           user_id: string
         }
@@ -143,8 +145,10 @@ export type Database = {
           default_currency?: string | null
           default_payment_terms?: string | null
           id?: string
+          irpf_rate?: number | null
           logo_url?: string | null
           tax_number?: string | null
+          tax_rate?: number | null
           updated_at?: string
           user_id: string
         }
@@ -159,8 +163,10 @@ export type Database = {
           default_currency?: string | null
           default_payment_terms?: string | null
           id?: string
+          irpf_rate?: number | null
           logo_url?: string | null
           tax_number?: string | null
+          tax_rate?: number | null
           updated_at?: string
           user_id?: string
         }
