@@ -218,7 +218,7 @@ export const InvoicesDashboardContent = () => {
 
     // Final = (subtotal - IRPF) + IVA applied to reduced price
     // Final = subtotal * (1 - IRPF%) * (1 + IVA%)
-    return subtotal * (1 - irpfRate / 100) * (1 + taxRate / 100);
+    return subtotal * (1 + taxRate / 100) - subtotal * (irpfRate / 100);
   }
 
   // helper that supports camelCase and snake_case keys

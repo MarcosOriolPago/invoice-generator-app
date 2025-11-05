@@ -1,0 +1,26 @@
+services:
+  invoice_db:
+    # Reuses the 'postgres:15-alpine' image you already have locally
+    image: postgres:15-alpine 
+    
+    # Gives the container a unique, readable name
+    container_name: invoice_generator_db 
+    restart: always
+    
+    environment:
+      POSTGRES_USER: invoice_user
+      POSTGRES_PASSWORD: invoice
+      POSTGRES_DB: invoice_app_db
+      
+    # Maps the container port (5432) to 5434 on your host machine.
+    # This prevents conflicts if your other PostgreSQL containers use the default 5432.
+    ports:
+      - "5434:5432" 
+      
+    # Ensures your database data persists across container restarts
+    volumes:
+      - invoice_db_data:/var/lib/postgresql/data 
+
+volumes:
+  # Defines the unique named volume for persistent storage
+  invoice_db_data:

@@ -39,9 +39,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
     const irpfRate = data.irpfRate ?? userConfig?.irpf_rate ?? 15;
     
     const irpfAmount = subtotal * (irpfRate / 100);
-    const afterIrpf = subtotal - irpfAmount;
-    const taxAmount = afterIrpf * (taxRate / 100);
-    const total = afterIrpf + taxAmount;
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount - irpfAmount;
     
     // Get currency symbol from user config, default to USD
     const getCurrencySymbol = (currency: string | undefined) => {
