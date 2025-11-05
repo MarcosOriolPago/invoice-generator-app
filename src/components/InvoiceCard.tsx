@@ -1,7 +1,7 @@
 import { FC } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { DollarSign, Calendar, Trash2, MoreVertical, FolderInput } from "lucide-react";
+import { EuroIcon, Calendar, Trash2, MoreVertical, FolderInput } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -108,8 +108,8 @@ export const InvoiceCard: FC<Props> = ({
         <CardContent className="space-y-2" onClick={onView}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-success" />
-              <span className="font-bold text-success">${calculateTotal(invoice).toFixed(2)}</span>
+              <EuroIcon className="w-4 h-4 text-success" />
+              <span className="font-bold text-success">{calculateTotal(invoice).toFixed(2)}</span>
             </div>
             <span className={`text-xs font-semibold px-2 py-1 rounded-full ${isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {isPaid ? 'Paid' : 'Unpaid'}

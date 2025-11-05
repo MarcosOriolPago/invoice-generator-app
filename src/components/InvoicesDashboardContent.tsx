@@ -63,6 +63,7 @@ export const InvoicesDashboardContent = () => {
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
 
+
     if (error) {
       console.error("Error fetching invoices for user:", error)
       return
@@ -202,6 +203,7 @@ export const InvoicesDashboardContent = () => {
   const calculateInvoiceTotal = (invoice: any) => {
     const services =
       (invoice?.data?.services ?? invoice?.data?.services_list ?? invoice?.data?.services) || []
+    const tax = invoice?.data?.taxRate || 1;
 
     return (
       services?.reduce(
@@ -213,7 +215,7 @@ export const InvoicesDashboardContent = () => {
           ) || 0),
         0
       ) || 0
-    )
+    ) * tax;
   }
 
   // helper that supports camelCase and snake_case keys

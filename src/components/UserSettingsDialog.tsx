@@ -23,6 +23,7 @@ interface UserConfig {
   company_phone: string;
   company_website: string;
   tax_number: string;
+  tax_rate: number;
   bank_details: string;
   default_payment_terms: string;
   default_currency: string;
@@ -46,7 +47,8 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
     tax_number: '',
     bank_details: '',
     default_payment_terms: '30 days',
-    default_currency: 'USD',
+    default_currency: 'EUR',
+    tax_rate: 1,
   });
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
           bank_details: data.bank_details || '',
           default_payment_terms: data.default_payment_terms || '30 days',
           default_currency: data.default_currency || 'USD',
+          tax_rate: data.tax_rate || 1
         });
       }
     } catch (error) {
@@ -118,7 +121,7 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
   };
 
 
-  const updateConfig = (field: keyof UserConfig, value: string) => {
+  const updateConfig = (field: keyof UserConfig, value) => {
     setConfig(prev => ({ ...prev, [field]: value }));
   };
 
@@ -208,17 +211,31 @@ export const UserSettingsDialog = ({ open, onOpenChange }: UserSettingsDialogPro
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="tax_number">Tax Number / VAT ID</Label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="tax_number"
-                  value={config.tax_number}
-                  onChange={(e) => updateConfig('tax_number', e.target.value)}
-                  className="pl-10"
-                  placeholder="Tax identification number"
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="tax_number">Tax Number / VAT ID</Label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="tax_number"
+                    value={config.tax_number}
+                    onChange={(e) => updateConfig('tax_number', e.target.value)}
+                    className="pl-10"
+                    placeholder="Tax identification number"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="tax_rate">Tax Rate</Label>
+                <div className="relative">
+                  <Input
+                    id="tax_rate"
+                    value={config.tax_rate}
+                    onChange={(e) => updateConfig('tax_rate', e.target.value)}
+                    placeholder="Tax rate"
+                  />
+                </div>
               </div>
             </div>
 

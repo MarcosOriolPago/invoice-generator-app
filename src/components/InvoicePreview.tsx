@@ -107,13 +107,13 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(
                 <div>
                     <p className="text-xs text-gray-500 uppercase">Invoice Date</p>
                     <p className="font-semibold text-gray-900">
-                        {new Date(data.invoiceDate).toLocaleDateString()}
+                        {new Date(data.invoiceDate).toISOString().split("T")[0]}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-gray-500 uppercase">Due Date</p>
                     <p className="font-semibold text-gray-900">
-                        {new Date(data.dueDate).toLocaleDateString()}
+                        {new Date(data.dueDate).toISOString().split("T")[0]}
                     </p>
                 </div>
                 {userConfig?.default_payment_terms && (
